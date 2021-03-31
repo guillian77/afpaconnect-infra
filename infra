@@ -1,0 +1,78 @@
+#!/bin/bash
+#encoding=utf8
+
+set -e
+
+# get the absolute path of the command (following the symlink) and get into it
+infrapath=$(dirname $([ -L $0 ] && readlink $0 || echo $0))
+cd $infrapath
+infrapath=`pwd`
+
+windows()
+{
+    [[ "$OSTYPE" != "linux-gnu" ]];
+}
+
+exec() {
+  if ! windows; then
+    sh -c "sudo -S $1"
+  else
+    sh -c "$1"
+  fi
+}
+
+# basic function to check if a command exists or not
+command_exists () {
+    type "$1" &> /dev/null ;
+}
+
+# Check individual requirement
+__requirement() {
+    echo -n "${1}: "
+    if command_exists $2;then
+        Gre "pass"
+    else
+        Red "FAIL"
+        requirement_pass=0
+    fi
+}
+
+# Check every requirements
+check_requirements() {
+    __requirement "Docker" "docker"
+    __requirement "Docker-compose" "docker-compose"
+    __requirement "Curl" "curl"
+    __requirement "Git" "git"
+    __requirement "Php" "php"
+    if command_exists "php"; then
+        __requirement_php_module "curl"
+        __requirement_php_module "mcrypt"
+        __requirement_php_module "xml"
+        __requirement_php_module "zip"
+        __requirement_php_module "mbstring"
+        __requirement_php_module "bcmath"
+        __requirement_php_module "gd"
+    fi
+    __requirement "Composer" "composer"
+}
+
+# Run Docker command
+__docker() {
+    args=$@
+    cd "${infrapath}"
+
+#    [ "$args" = "up" ] && args="up -d"
+
+    sudo docker-compose $args
+}
+
+case $@ in
+    install)
+        source tools/install.func
+        ;;
+    up*|stop*|down*|kill*)
+        __docker $@
+        ;;
+    *)
+esac
+exit 0
