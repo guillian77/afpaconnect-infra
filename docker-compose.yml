@@ -1,19 +1,41 @@
 version: '3'
 services:
-  apache:
-    build: ./
+  # ---------------------------
+  # WEB
+  # ---------------------------
+  web:
+    container_name: web
+    links:
+      - db:db
+    build:
+      context:  ./conf/php-apache
+      dockerfile: Dockerfile
     ports:
       - 8000:80
     volumes:
       - ./project:/app
+
+  # ---------------------------
+  # DATABASE
+  # ---------------------------
   db:
-    image: mariadb:10.4
+    container_name: db
+    image: mysql:5.7
+    ports:
+      - "3306:3306"
     environment:
+      - MYSQL_ROOT_PASSWORD
       - MYSQL_DATABASE
       - MYSQL_USER
       - MYSQL_PASSWORD
-      - MYSQL_RANDOM_ROOT_PASSWORD=yes
-    env_file:
-      - ./.env
+
+  # ---------------------------
+  # PHPMYADMIN
+  # ---------------------------
+  phpmyadmin:
+    container_name: phpmyadmin
+    image: phpmyadmin/phpmyadmin
     ports:
-      - "3306:3306"
+      - "8080:80"
+    links:
+      - db:db
