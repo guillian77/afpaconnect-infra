@@ -2,6 +2,7 @@ version: '3'
 services:
   # ---------------------------
   # WEB
+  # http://127.0.0.1:8000
   # ---------------------------
   web:
     container_name: web
@@ -29,11 +30,22 @@ services:
 
   # ---------------------------
   # PHPMYADMIN
+  # http://127.0.0.1:8085
   # ---------------------------
   phpmyadmin:
     container_name: phpmyadmin
     image: phpmyadmin/phpmyadmin
     ports:
-      - "8080:80"
+      - "8085:80"
     links:
       - database:db
+
+  # ---------------------------
+  # MAILER
+  # http://127.0.0.1:8025
+  # ---------------------------
+  mailhog:
+    image: mailhog/mailhog:v1.0.0
+    ports:
+      - "1025:1025"
+      - "8025:8025"
