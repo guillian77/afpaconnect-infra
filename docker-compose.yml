@@ -1,44 +1,83 @@
+# ------------------------------------------------------------------------------------------------------------
+# DOCKER COMPOSE FILE
+#
+# > network:
+#   Permet de définir le réseaux pour les différents conteneurs.
+#   Ce réseau est utilisé par le conteneur hostmanager qui met à jour dynamiquement les hosts
+#   sur le système d'exploitation.
+#
+# > services:
+#   Définition des différents conteneur à utiliser pour cette application.
+#   Les clés des conteneurs sont utilisées pour le réseaux. Au besoin, utiliser
+#   le paramètre "container_name" afin de nommer proprement le conteneur sur le réseau.
+#
+# ------------------------------------------------------------------------------------------------------------
 version: '3'
-services:
-  # ---------------------------
-  # WEB
-  # http://127.0.0.1:8000
-  # ---------------------------
-  web:
-    container_name: web
-    build:
-      context:  ./conf/php-apache
-      dockerfile: Dockerfile
-    ports:
-      - 8000:80
-    volumes:
-      - ./project:/app
 
-  # ---------------------------
-  # DATABASE
-  # ---------------------------
-  database:
-    container_name: database
-    image: mysql:5.7
-    ports:
-      - "3306:3306"
+networks:
+  default:
+    name: dev
+
+services:
+  # ------------------------------------------------------------------------------------------------------------
+  # HOSTMANAGER
+  # ------------------------------------------------------------------------------------------------------------
+  hostmanager:
+    image: dekadmin/docker-hostmanager
+    restart: always
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /etc/hosts:/hosts
+
+  # ------------------------------------------------------------------------------------------------------------
+  # WEB APP
+  # http://dev.afpaconnect.fr
+  # ------------------------------------------------------------------------------------------------------------
+  app:
+    build:
+      context: .
+      dockerfile: ./config/images/apache.dockerfile
+    hostname: ${APP_NAME}
+    user: ${uid}:${gid}
+    restart: on-failure
     environment:
-      - MYSQL_ROOT_PASSWORD
+      - DOMAIN_NAME=dev.${APP_NAME}.fr,app.${APP_NAME}
+      - DISPLAY=${APP_DISPLAY}
+      - QT_X11_NO_MITSHM=${APP_QT_X11_NO_MITSHM}
+    volumes:
+      - ./src/${APP_NAME}/:/var/www/${APP_NAME}
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+    ports:
+      - "80:80"
+      - "443:443"
+    working_dir: /var/www/${APP_NAME}
+    depends_on:
+      - db
+
+  # ------------------------------------------------------------------------------------------------------------
+  # DATABASE
+  # ------------------------------------------------------------------------------------------------------------
+  db:
+    image: mariadb:10.4
+    environment:
+      - DOMAIN_NAME=db.${APP_NAME}.fr,db-${APP_NAME}
       - MYSQL_DATABASE
       - MYSQL_USER
       - MYSQL_PASSWORD
+      - MYSQL_RANDOM_ROOT_PASSWORD=yes
+    ports:
+      - "3306:3306"
 
   # ---------------------------
   # PHPMYADMIN
   # http://127.0.0.1:8085
   # ---------------------------
   phpmyadmin:
-    container_name: phpmyadmin
     image: phpmyadmin/phpmyadmin
     ports:
       - "8085:80"
     links:
-      - database:db
+      - db
 
   # ---------------------------
   # MAILER
