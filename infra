@@ -30,9 +30,14 @@ __docker() {
 }
 
 case $@ in
-    up*|stop*|down*|kill*)
-        __docker $@
-        ;;
-    *)
+  up*|stop*|down*|kill*|ps*)
+    __docker $@
+    ;;
+  login*)
+    docker-compose exec app bash
+    ;;
+  *)
+    echo "Unknow command $@"
+    ;;
 esac
 exit 0
