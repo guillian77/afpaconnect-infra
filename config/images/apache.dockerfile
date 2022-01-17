@@ -28,11 +28,14 @@ RUN usermod -aG www-data ${APP_NAME}
 # Install PHP and PHP extensions
 # ---------------------------------------------------------------------
 RUN apt-get update
-RUN apt-get install -y --no-install-recommends curl libzip-dev libpng-dev unzip git
-RUN apt-get install -y --no-install-recommends libxml2-utils libfreetype6-dev libjpeg62-turbo-dev
-RUN docker-php-ext-install -j$(nproc) zip bcmath sockets mysqli pdo pdo_mysql calendar opcache
+RUN apt-get install -y --no-install-recommends libcurl4-openssl-dev libzip-dev libpng-dev unzip git
+RUN apt-get install -y --no-install-recommends libxml2-dev libfreetype6-dev libjpeg62-turbo-dev
+
+RUN docker-php-ext-install -j$(nproc) zip bcmath sockets mysqli pdo pdo_mysql calendar opcache xml curl
+
 RUN docker-php-ext-configure gd --with-jpeg=/usr/include/ --with-freetype=/usr/include/
 RUN docker-php-ext-install gd
+
 RUN pecl install xdebug-2.9.1
 RUN docker-php-ext-enable xdebug
 
@@ -61,6 +64,7 @@ RUN a2enmod proxy_connect
 RUN a2enmod rewrite
 RUN a2enmod headers
 RUN a2enmod speling
+RUN a2enmod remoteip
 
 # Create file structure.
 RUN mkdir -p /var/www/${APP_NAME}/${WEB_PATH}
@@ -89,6 +93,18 @@ RUN a2ensite dev.conf
 RUN /etc/init.d/apache2 stop
 RUN /etc/init.d/apache2 start
 
+# ------------------------
+# INSTAL MAILER
+# ------------------------
+RUN apt-get update
+RUN apt-get install --no-install-recommends --assume-yes --quiet ca-certificates
+RUN rm -rf /var/lib/apt/lists/*
+RUN curl -Lsf 'https://storage.googleapis.com/golang/go1.8.3.linux-amd64.tar.gz' | tar -C '/usr/local' -xvzf -
+ENV PATH /usr/local/go/bin:$PATH
+RUN go get github.com/mailhog/mhsendmail
+RUN cp /root/go/bin/mhsendmail /usr/bin/mhsendmail
+RUN echo 'sendmail_path = /usr/bin/mhsendmail --smtp-addr mailhog:1025' > /usr/local/etc/php/php.ini
+
 # ---------------------------------------------------------------------
 # Install Composer
 # ---------------------------------------------------------------------
@@ -108,6 +124,7 @@ RUN mv ${HOME}/.symfony/bin/symfony /usr/local/bin/symfony
 # ---------------------------------------------------------------------
 # MISCELLANEOUS
 # ---------------------------------------------------------------------
+RUN apt-get update
 RUN apt-get install -y mariadb-client nano wget iputils-ping
 
 # ---------------------------------------------------------------------
